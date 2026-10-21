@@ -1,5 +1,11 @@
 # ESPHome
 
+## Production configuration
+
+The sanitized production ESPHome YAML is available at [`../esphome/dumpster-fire-alert.yaml`](../esphome/dumpster-fire-alert.yaml).
+
+Secrets are intentionally not committed. The API encryption key and fallback-hotspot password are replaced with `OMITTED`, while the normal Wi-Fi credentials remain referenced through `!secret`.
+
 ## Purpose
 
 ESPHome provides two interfaces between the physical Dumpster Fire and Home Assistant:
@@ -53,10 +59,10 @@ binary_sensor:
     name: "Flame State"
     id: dumpster_flame_state
     filters:
-      - delayed_off: 1s
+      - delayed_off: 500ms
 ```
 
-The exact delayed-off value can be tuned. The purpose is simply to bridge the natural dark intervals in the flickering flame effect.
+The deployed value is `500ms`. The purpose is to bridge the natural dark intervals in the flickering flame effect without making state changes feel excessively delayed.
 
 ## Home Assistant entity
 
