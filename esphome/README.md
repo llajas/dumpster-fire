@@ -1,10 +1,16 @@
 # ESPHome Source
 
-The ESPHome side of the project currently lives on the physical device and is documented in [../docs/esphome.md](../docs/esphome.md).
+The sanitized production ESPHome configuration is:
 
-The key interfaces are:
+- [`dumpster-fire-alert.yaml`](dumpster-fire-alert.yaml)
+
+The committed file preserves the actual deployed GPIO behavior:
 
 - `GPIO25` → trigger PC817 → physical toggle input
-- spare input GPIO → flame-state PC817 → binary sensor
+- `GPIO27` ← flame-state PC817 → binary sensor
+- 100 ms trigger pulse
+- 500 ms delayed-off filter for the flickering flame output
 
-If the complete production ESPHome YAML is exported into this repository later, place it in this directory and update the documentation to reference it directly.
+Secrets are intentionally not committed. The API encryption key and fallback-hotspot password are replaced with `OMITTED`, while Wi-Fi credentials remain referenced through ESPHome `!secret`.
+
+See [../docs/esphome.md](../docs/esphome.md) for the hardware/software behavior in context.
