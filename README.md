@@ -26,7 +26,7 @@ The result is a physical indicator for:
 
 ## The toy
 
-The base device is a **100% Soft Dumpster Fire Night Light**.
+The base device is the [**100% Soft Dumpster Fire Night Light**](https://100soft.shop/products/dumpster-fire-night-light).
 
 Stock behavior:
 
