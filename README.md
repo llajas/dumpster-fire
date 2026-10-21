@@ -148,7 +148,7 @@ A second PC817 is wired in parallel with the flame LED supply. Its output is con
 binary_sensor.office_dumpster_fire_flame_state
 ```
 
-Because the flame effect itself flickers, ESPHome uses a delayed-off filter to smooth the pulses into a stable binary state.
+Because the flame effect itself flickers, ESPHome uses a `500ms` delayed-off filter to smooth the pulses into a stable binary state.
 
 ## Austin fire data
 
@@ -167,6 +167,10 @@ TRASH - Trash Fire
 It deliberately does **not** filter only for `ACTIVE` incidents. Matching incidents can become `ARCHIVED` before the next five-minute poll, so the system instead fetches the most recent matching records regardless of status and deduplicates by `traffic_report_id`.
 
 See [docs/austin-fire-data.md](docs/austin-fire-data.md) for details.
+
+## ESPHome configuration
+
+The sanitized production ESPHome configuration is included at [`esphome/dumpster-fire-alert.yaml`](esphome/dumpster-fire-alert.yaml). API and fallback-hotspot secrets are intentionally omitted; Wi-Fi credentials remain referenced through ESPHome secrets.
 
 ## Home Assistant behavior
 
@@ -241,7 +245,8 @@ dumpster-fire/
 │   ├── austin-fire-data.md
 │   └── journey.md
 ├── esphome/
-│   └── README.md
+│   ├── README.md
+│   └── dumpster-fire-alert.yaml
 ├── home-assistant/
 │   ├── austin_dumpster_fire.yaml
 │   └── austin_dumpster_fire_poll.py
@@ -284,6 +289,10 @@ A few lessons that mattered:
 - Treat the flame-state optocoupler as a parallel sensing circuit; do not route the original flame LEDs through it.
 - Validate the external supply voltage before connecting it to the toy.
 - When reworking tiny pads, pre-tin the wire and pad rather than repeatedly adding solder.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
 
 ## Status
 
