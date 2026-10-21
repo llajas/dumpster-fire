@@ -1,0 +1,65 @@
+---
+# Board: Generic ESP32 Board (Generic)
+# Definition: definitions/boards/generic-esp32/manifest.yaml
+
+esphome:
+  name: dumpster-fire-alert
+  friendly_name: dumpster-fire
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "OMITTED"
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: dumpster-fire Fallback Hotspot
+    password: "OMITTED"
+
+captive_portal:
+
+# Physical output used to emulate a tap on the Dumpster Fire.
+#
+# GPIO25 = pin marked D25 on this ESP32 board.
+output:
+  - platform: gpio
+    pin: GPIO25
+    id: dumpster_trigger
+
+button:
+  - platform: template
+    name: "Trigger"
+    icon: "mdi:fire"
+    on_press:
+      - output.turn_on: dumpster_trigger
+      - delay: 100ms
+      - output.turn_off: dumpster_trigger
+
+# Detects whether the Dumpster Fire flame LEDs are actually active.
+#
+# The second PC817 optocoupler watches the flame LED supply.
+# Its output flickers with the flame effect, so delayed_off keeps
+# Home Assistant from seeing rapid ON/OFF chatter.
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO27
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Flame State"
+    id: dumpster_flame_state
+    filters:
+      - delayed_off: 500ms
