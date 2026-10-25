@@ -4,6 +4,10 @@ A physical dumpster-fire night light that turns on when the City of Austin repor
 
 This started as a joke-sized smart-home project and turned into a surprisingly deep exercise in reverse-engineering a cheap toy, taming an extremely high-impedance trigger circuit, adding real state feedback, integrating ESPHome with Home Assistant, and finally wiring the whole thing to Austin's public fire-dispatch data.
 
+![Assembled Dumpster Fire night light](images/assembled-dumpster-fire.jpg)
+
+*The assembled night light on the desk.*
+
 ## What it does
 
 The finished system watches Austin's real-time fire incident dataset for these exact dispatch categories:
@@ -93,6 +97,30 @@ The conversion currently uses:
 The first PC817 handles the **trigger path**.
 
 The second PC817 monitors the existing **flame LED output** so Home Assistant knows whether the lamp is really on or off.
+
+## Build photos
+
+These photos document the actual build and its intermediate stages; use the [hardware guide](docs/hardware.md) for the wiring description.
+
+### Bench testing with the toy open and the control electronics connected
+
+![Dumpster Fire electronics being tested on the workbench](images/bench-build.jpg)
+
+### The open base during assembly, with the ESP32 and interface wiring outside the enclosure
+
+![Open base with added control electronics and wiring](images/open-base-electronics.jpg)
+
+### The delicate R18/Q3 trigger connection
+
+![Close-up of the R18 and Q3 trigger connection](images/r18-trigger-closeup.jpg)
+
+### The original flame LED wire connections before rework
+
+![Original flame LED wire connections on the PCB](images/flame-led-pads.jpg)
+
+### Flame LED pad rework during the repair
+
+![Close-up of the flame LED pad repair](images/flame-pad-repair.jpg)
 
 ## Why the trigger circuit got weird
 
@@ -251,7 +279,13 @@ dumpster-fire/
 │   ├── austin_dumpster_fire.yaml
 │   └── austin_dumpster_fire_poll.py
 └── images/
-    └── README.md
+    ├── README.md
+    ├── assembled-dumpster-fire.jpg
+    ├── bench-build.jpg
+    ├── open-base-electronics.jpg
+    ├── r18-trigger-closeup.jpg
+    ├── flame-led-pads.jpg
+    └── flame-pad-repair.jpg
 ```
 
 ## The journey

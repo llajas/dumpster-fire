@@ -21,6 +21,10 @@ The initial assumption was that somewhere inside there would be a button-like si
 
 That assumption lasted only briefly.
 
+![Dumpster Fire electronics being tested on the workbench](../images/bench-build.jpg)
+
+*Bench testing with the toy open and the control electronics connected.*
+
 ## Discovering the trigger
 
 Shorting obvious switch-area points did not reproduce the tap behavior.
@@ -132,6 +136,10 @@ This part of the project provided several lessons about:
 - solder wick,
 - mechanical strain,
 - not repeatedly reheating tiny pads.
+
+![Close-up of the flame LED pad repair](../images/flame-pad-repair.jpg)
+
+*Flame LED pad rework during the repair.*
 
 ## Finding the Austin data
 

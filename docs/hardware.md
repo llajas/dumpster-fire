@@ -9,6 +9,10 @@ The final hardware has two independent optocoupler interfaces:
 1. **Trigger interface** — lets the ESP32 emulate the original tap behavior without directly exposing the high-impedance trigger node to GPIO noise.
 2. **Flame-state interface** — watches the original flame LED supply and reports the actual physical light state back to ESPHome/Home Assistant.
 
+![Open base with added control electronics and wiring](../images/open-base-electronics.jpg)
+
+*The open base during assembly, with the ESP32 and interface wiring outside the enclosure. These are build-progress photos, not a complete wiring diagram.*
+
 ## Main components
 
 - 100% Soft Dumpster Fire Night Light
@@ -55,6 +59,10 @@ The node behaved as an extremely high-impedance input:
 - even capacitive coupling through insulated wire could be enough.
 
 Direct ESP32 GPIO control was therefore unreliable. Boot transitions and general electrical noise could randomly toggle the toy.
+
+![Close-up of the R18 and Q3 trigger connection](../images/r18-trigger-closeup.jpg)
+
+*The delicate R18/Q3 trigger connection.*
 
 ## Trigger interface
 
@@ -119,6 +127,16 @@ Original toy flame output
 ```
 
 Because the flame effect flickers, the optocoupler output also flickers. ESPHome smooths this into a stable binary state with a delayed-off filter.
+
+### Flame LED connections and repair
+
+![Original flame LED wire connections on the PCB](../images/flame-led-pads.jpg)
+
+*The original flame LED wire connections before rework.*
+
+![Close-up of the flame LED pad repair](../images/flame-pad-repair.jpg)
+
+*Flame LED pad rework during the repair. Verify polarity with a meter; wire colors in progress photos are not a wiring specification.*
 
 ## Mechanical lessons
 
