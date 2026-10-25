@@ -4,6 +4,12 @@ Photos from the project conversation, used in the [main README](../README.md), [
 
 These include intermediate build stages; consult the hardware guide for the final wiring description.
 
+## Flagship photo
+
+![Dumpster Fire night light glowing orange and green on the desk](dumpster-fire-hero.jpg)
+
+The finished Dumpster Fire lighting up the desk.
+
 ## Assembled Dumpster Fire night light
 
 ![Assembled Dumpster Fire night light](assembled-dumpster-fire.jpg)

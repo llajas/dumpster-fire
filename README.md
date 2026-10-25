@@ -4,9 +4,9 @@ A physical dumpster-fire night light that turns on when the City of Austin repor
 
 This started as a joke-sized smart-home project and turned into a surprisingly deep exercise in reverse-engineering a cheap toy, taming an extremely high-impedance trigger circuit, adding real state feedback, integrating ESPHome with Home Assistant, and finally wiring the whole thing to Austin's public fire-dispatch data.
 
-![Assembled Dumpster Fire night light](images/assembled-dumpster-fire.jpg)
+![Dumpster Fire night light glowing orange and green on the desk](images/dumpster-fire-hero.jpg)
 
-*The assembled night light on the desk.*
+*The finished Dumpster Fire lighting up the desk.*
 
 ## What it does
 
@@ -101,6 +101,10 @@ The second PC817 monitors the existing **flame LED output** so Home Assistant kn
 ## Build photos
 
 These photos document the actual build and its intermediate stages; use the [hardware guide](docs/hardware.md) for the wiring description.
+
+### Assembled night light
+
+![Assembled Dumpster Fire night light](images/assembled-dumpster-fire.jpg)
 
 ### Bench testing with the toy open and the control electronics connected
 
@@ -280,6 +284,7 @@ dumpster-fire/
 │   └── austin_dumpster_fire_poll.py
 └── images/
     ├── README.md
+    ├── dumpster-fire-hero.jpg
     ├── assembled-dumpster-fire.jpg
     ├── bench-build.jpg
     ├── open-base-electronics.jpg
