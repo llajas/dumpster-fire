@@ -6,7 +6,7 @@ This started as a joke-sized smart-home project and turned into a surprisingly d
 
 ![Dumpster Fire night light glowing orange and green on the desk](images/dumpster-fire-hero.jpg)
 
-*The finished Dumpster Fire lighting up the desk.*
+*The finished Dumpster Fire lighting up the shelf, his cheerful demeanor contrasted by the Daedric Prince of Domination to the right.*
 
 ## What it does
 
