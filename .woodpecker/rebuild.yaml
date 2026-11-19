@@ -1,0 +1,50 @@
+when:
+  event: cron
+  branch: main
+  cron: "Rebuild"
+
+steps:
+  - name: scan-filesystem
+    image: woodpeckerci/plugin-trivy
+    settings:
+      exit-code: 1
+      severity: HIGH,CRITICAL
+      skip-dirs: .git,controller/.venv,controller/.ruff_cache
+      dir: .
+
+  - name: generate-tags
+    image: ghcr.io/dvjn/woodpecker-docker-tags-plugin
+    settings:
+      tags: |
+        raw --value latest
+        sha
+      tags_file: .tags
+
+  - name: build-image
+    image: woodpeckerci/plugin-docker-buildx
+    settings:
+      registry: https://registry.lajas.tech/v2/
+      repo: registry.lajas.tech/dumpster-fire-controller
+      dockerfile: Dockerfile
+      tags_file: .tags
+      username:
+        from_secret: registry_username
+      password:
+        from_secret: registry_token
+    depends_on:
+      - generate-tags
+      - scan-filesystem
+
+  - name: scan-image
+    image: woodpeckerci/plugin-trivy
+    settings:
+      exit-code: 0
+      severity: HIGH,CRITICAL
+      image-ref: registry.lajas.tech/dumpster-fire-controller:latest
+      registry-name: registry.lajas.tech
+      registry-username:
+        from_secret: registry_username
+      registry-password:
+        from_secret: registry_token
+    depends_on:
+      - build-image
