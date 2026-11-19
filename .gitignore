@@ -1,0 +1,4 @@
+controller/.venv/
+controller/.ruff_cache/
+controller/__pycache__/
+*.pyc

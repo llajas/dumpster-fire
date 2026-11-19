@@ -1,0 +1,8 @@
+*
+!controller/
+!controller/*.py
+!controller/pyproject.toml
+!controller/uv.lock
+controller/.venv/
+controller/.ruff_cache/
+controller/__pycache__/
