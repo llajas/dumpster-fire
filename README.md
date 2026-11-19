@@ -223,6 +223,18 @@ See [docs/home-assistant.md](docs/home-assistant.md).
 
 In the homelab, Home Assistant runs in Kubernetes.
 
+An independent Python controller and container definition are available
+in [`controller/`](controller/) and [`Dockerfile`](Dockerfile). They move
+incident polling, durable state and toggle policy out of Home Assistant while
+leaving the ESPHome device and its entities connected to Home Assistant. The
+legacy HA package below remains the active path until an exclusive cutover;
+see [the migration runbook](docs/controller-migration.md), the
+[Woodpecker image pipeline](.woodpecker/default.yaml), and the
+[homelab controller chart](https://github.com/llajas/homelab/tree/master/apps/dumpster-fire).
+The pipeline publishes to `registry.lajas.tech/dumpster-fire-controller` on
+pushes to `main` and the `Rebuild` cron. Do not run both controllers against
+the physical toggle at once.
+
 The production homelab chart:
 
 1. Packages the HA YAML and Python poller in a ConfigMap.
@@ -238,10 +250,14 @@ This repo keeps project-specific source and documentation together; the homelab 
 ```text
 dumpster-fire/
 ├── README.md
+├── Dockerfile
+├── controller/              # standalone incident and device policy
+├── .woodpecker/             # image publishing pipeline
 ├── docs/
 │   ├── hardware.md
 │   ├── esphome.md
 │   ├── home-assistant.md
+│   ├── controller-migration.md
 │   ├── austin-fire-data.md
 │   └── journey.md
 ├── esphome/
@@ -249,7 +265,8 @@ dumpster-fire/
 │   └── dumpster-fire-alert.yaml
 ├── home-assistant/
 │   ├── austin_dumpster_fire.yaml
-│   └── austin_dumpster_fire_poll.py
+│   ├── austin_dumpster_fire_poll.py
+│   └── austin_dumpster_fire_status.yaml
 └── images/
     └── README.md
 ```
