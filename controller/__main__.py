@@ -15,9 +15,10 @@ IO_TIMEOUT_SECONDS=20. Optional FLAME_OBJECT_ID / TRIGGER_OBJECT_ID override nam
 discovery (Flame State / Trigger). FEED_URL overrides the Socrata URL for a local
 feed. Configuration is read at startup; restart to change it. Disabling consumes
 incidents without activation; expired timers clear without pressing while disabled.
-An in-cluster GET /status endpoint on port 8080 supplies poll and incident
-diagnostics to HA, while GET /health supplies a liveness check. Neither accepts
-commands and the endpoint must not be exposed outside the trusted cluster.
+In-cluster GET /status and /metrics endpoints on port 8080 supply controller
+diagnostics and bounded-cardinality Prometheus metrics; GET /health supplies a
+liveness check. None accepts commands and the endpoints must not be exposed
+outside the trusted cluster.
 
 Migration: stop the old HA policy/poller first. Copy its JSON state to STATE_PATH
 or mount that same file; legacy initialized/seen/new_run_id fields are accepted.
@@ -57,6 +58,7 @@ from pydantic import ValidationError
 from .config import Settings
 from .device import NativeDevice
 from .feed import client, fetch
+from .metrics import LAST_POLL, LAST_SUCCESS, POLL_DURATION, POLL_SUCCESS, POLL_TOTAL
 from .policy import LOGGER, Controller
 from .state import Store
 from .status import serve
@@ -69,10 +71,15 @@ async def poll(controller: Controller, http: httpx2.AsyncClient) -> None:
     """Fetch immediately, then every five minutes; failed feeds mutate nothing."""
     while True:
         started = anyio.current_time()
+        poll_started_at = datetime.now(UTC).timestamp()
+        LAST_POLL.set(poll_started_at)
         try:
             with anyio.fail_after(controller.settings.io_timeout_seconds):
                 current = await fetch(http, controller.settings.feed_url)
         except (httpx2.HTTPError, ValidationError, TimeoutError) as exc:
+            POLL_TOTAL.labels(result="failure").inc()
+            POLL_SUCCESS.set(0)
+            POLL_DURATION.observe(anyio.current_time() - started)
             LOGGER.warning("feed.failed reason=%s", type(exc).__name__)
             controller.status = controller.status.model_copy(
                 update={
@@ -85,6 +92,10 @@ async def poll(controller: Controller, http: httpx2.AsyncClient) -> None:
             )
         else:
             await controller.consume(current)
+            POLL_TOTAL.labels(result="success").inc()
+            POLL_SUCCESS.set(1)
+            LAST_SUCCESS.set(poll_started_at)
+            POLL_DURATION.observe(anyio.current_time() - started)
         await anyio.sleep(max(0, 300 - (anyio.current_time() - started)))
 
 

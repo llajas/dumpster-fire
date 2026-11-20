@@ -9,6 +9,20 @@ from typing import TYPE_CHECKING, Final
 import anyio
 
 from .device import DeviceUnavailableError
+from .metrics import (
+    ACTIVITY_ACTIVE,
+    ACTIVITY_DEADLINE,
+    CONTROLLER_ENABLED,
+    CURRENT_RECORDS,
+    FLAME_STATE,
+    FLAME_STATE_KNOWN,
+    FLAME_STATE_OBSERVED,
+    FRESH_INCIDENTS,
+    INCIDENT_BATCHES,
+    INCIDENT_RUN_ID,
+    SEEN_INCIDENTS,
+    TRIGGER_SUBMISSIONS,
+)
 from .state import State
 from .status import Status
 
@@ -33,6 +47,18 @@ class Controller:
         self.state: State = store.load()
         self.lock: anyio.Lock = anyio.Lock()
         self.clock: Callable[[], datetime] = lambda: datetime.now(UTC)
+        INCIDENT_RUN_ID.set(self.state.new_run_id)
+        CONTROLLER_ENABLED.set(float(settings.enabled))
+        SEEN_INCIDENTS.set(len(self.state.seen))
+        ACTIVITY_ACTIVE.set(float(self.state.activity_deadline is not None))
+        ACTIVITY_DEADLINE.set(
+            self.state.activity_deadline.timestamp()
+            if self.state.activity_deadline
+            else 0
+        )
+        FLAME_STATE_KNOWN.set(0)
+        FLAME_STATE.set(0)
+        FLAME_STATE_OBSERVED.set(0)
         self.status: Status = Status(
             initialized=self.state.initialized,
             new_run_id=self.state.new_run_id,
@@ -46,6 +72,11 @@ class Controller:
         """Publish in-memory state only after the durable transaction succeeds."""
         await anyio.to_thread.run_sync(self.store.save, state)
         self.state = state
+        SEEN_INCIDENTS.set(len(state.seen))
+        ACTIVITY_ACTIVE.set(float(state.activity_deadline is not None))
+        ACTIVITY_DEADLINE.set(
+            state.activity_deadline.timestamp() if state.activity_deadline else 0
+        )
         self.status = self.status.model_copy(
             update={
                 "initialized": state.initialized,
@@ -54,6 +85,7 @@ class Controller:
                 "activity_deadline": state.activity_deadline,
             }
         )
+        INCIDENT_RUN_ID.set(state.new_run_id)
 
     async def consume(self, current: tuple[Incident, ...]) -> None:
         """Seed, deduplicate and persist deadlines before any device command."""
@@ -90,6 +122,10 @@ class Controller:
             )
             if updated != previous:
                 await self.commit(updated)
+            if fresh:
+                INCIDENT_BATCHES.inc()
+                FRESH_INCIDENTS.inc(len(fresh))
+            CURRENT_RECORDS.set(len(current_ids))
             newest = next(
                 (row for row in current if row.traffic_report_id in fresh),
                 current[0] if current else None,
@@ -137,8 +173,12 @@ class Controller:
                 async with self.device.session() as session:
                     measured = session.flame
                     if measured is None:
+                        FLAME_STATE_KNOWN.set(0)
                         LOGGER.warning("device.state_missing")
                         return
+                    FLAME_STATE_KNOWN.set(1)
+                    FLAME_STATE.set(float(measured))
+                    FLAME_STATE_OBSERVED.set(self.clock().timestamp())
                     expired = self.clock() >= deadline
                     # Consume the opportunity BEFORE sending a non-idempotent command.
                     # A crash in between intentionally sacrifices delivery, not safety.
@@ -152,9 +192,12 @@ class Controller:
                         )
                     flame = session.flame
                     if flame is None:
+                        FLAME_STATE_KNOWN.set(0)
                         LOGGER.warning("device.disconnected_before_command")
                         return
                     if flame == expired:
+                        desired_state = "off" if expired else "on"
+                        TRIGGER_SUBMISSIONS.labels(desired_state=desired_state).inc()
                         session.press()
                         LOGGER.info(
                             "device.trigger_submitted desired_on=%s", not expired
