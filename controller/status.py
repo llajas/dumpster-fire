@@ -8,8 +8,11 @@ from datetime import datetime  # noqa: TC003 -- Pydantic resolves this field at 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import override
+
+from .metrics import REGISTRY
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -50,15 +53,18 @@ def serve(controller: StatusProvider) -> Generator[None]:
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
-            if self.path not in ("/health", "/status"):
+            if self.path not in ("/health", "/status", "/metrics"):
                 self.send_error(404)
                 return
             if self.path == "/health":
                 body = b"ok"
                 content_type = "text/plain"
-            else:
+            elif self.path == "/status":
                 body = controller.status.model_dump_json().encode("utf-8")
                 content_type = "application/json"
+            else:
+                body = generate_latest(REGISTRY)
+                content_type = CONTENT_TYPE_LATEST
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
