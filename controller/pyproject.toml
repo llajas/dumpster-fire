@@ -8,6 +8,7 @@ dependencies = [
   "anyio>=4.9,<5",
   "httpx2[http2,brotli,zstd]>=2.0,<3",
   "pydantic-settings>=2.8,<3",
+  "prometheus-client>=0.22,<1",
 ]
 
 [dependency-groups]
