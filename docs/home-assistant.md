@@ -1,4 +1,11 @@
-# Home Assistant Integration
+# Legacy Home Assistant Controller (Rollback Reference)
+
+> This page describes the former Home Assistant-owned incident poller and
+> automations. They are not active in the current deployment. The standalone
+> controller now owns polling, deduplication, the activity deadline, and
+> incident-driven toggle decisions. Home Assistant keeps ESPHome visibility,
+> controller diagnostics, and the manual `light.office_dumpster_fire` entity.
+> The legacy files below remain source material for a deliberate rollback.
 
 ## Overview
 
@@ -139,10 +146,8 @@ On HTTP, DNS, JSON, schema, or state-write failure:
 
 ## Deployment in the homelab
 
-The production Home Assistant instance runs in Kubernetes.
-
-The homelab Helm chart packages the two project files into a ConfigMap, mounts them into the Home Assistant pod, and copies them into `/config` during initialization.
-
-A ConfigMap checksum annotation participates in Deployment rollout behavior.
-
-The standalone project repo contains the source and documentation; the homelab repo owns deployment.
+The production Home Assistant instance runs in Kubernetes. The current homelab chart
+does not package the legacy poller or automation. It deploys only the status package
+and manual Light from its own ConfigMap. To restore this legacy implementation, first
+restore its chart packaging from version control, stop the standalone controller, and
+follow the rollback requirements in [the migration runbook](controller-migration.md).

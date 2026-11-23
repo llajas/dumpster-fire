@@ -1,12 +1,17 @@
 # Standalone controller migration
 
+The cutover is complete. The homelab Home Assistant chart no longer packages the
+legacy incident automation or poller; it retains the ESPHome integration and a
+status/manual-light package. The legacy HA files remain in this repository for
+reference and rollback, but restoring them requires restoring the chart support too.
+
 The ESPHome firmware stays unchanged. Home Assistant keeps the ESPHome integration,
 including the physical `Trigger` button and `Flame State` binary sensor. The
 standalone service owns incident polling, durable deduplication, an activity
 deadline and decisions to press the toggle. It talks directly to the ESP32's
 encrypted native API, not through Home Assistant.
 
-## Prepare
+## Prepare (historical)
 
 1. The `.woodpecker/default.yaml` pipeline builds from the root `Dockerfile`
    and publishes `registry.lajas.tech/dumpster-fire-controller` as both
@@ -34,17 +39,14 @@ encrypted native API, not through Home Assistant.
    yet. Verify the HA activity timer is idle and the physical lamp is off;
    the old HA timer is not stored in the poller's JSON and cannot be copied.
 
-## Exclusive cutover
+## Exclusive cutover (historical)
 
 The trigger is a toggle, not an idempotent on/off switch. **Never run the old
 HA automation and an enabled new controller at the same time.**
 
-1. In the homelab Home Assistant chart, set `austinDumpsterFire.enabled:
-   false` and `austinDumpsterFire.statusEnabled: true`, then roll out the HA
-   deployment. Its init script removes the copied legacy package and poller
-   from persistent `/config` and installs the read-only status package;
-   removing just the old ConfigMap would leave the automations active. The
-   chart refuses to render with both packages enabled. Confirm that the old
+1. The former chart cutover disabled the legacy HA package and enabled the
+   status package. The current chart has removed the legacy package option and
+   continues to remove stale copies from persistent `/config`. Confirm the old
    HA automations and command-line sensor are no longer running. Their entity
    registry entries can persist as unavailable until removed manually. Do
    **not** remove the ESPHome integration/device.
@@ -59,10 +61,10 @@ HA automation and an enabled new controller at the same time.**
    48-hour pruning could have forgotten an incident still in the feed.
    Incidents that arrive during this brief cutover may therefore be consumed
    without activating the lamp.
-  3. In homelab `apps/dumpster-fire/values.yaml`, set `replicas: 1` and
-     `AUSTIN_FIRE_ENABLED: "true"`, then sync the Argo CD application. The
-     chart provides the retained `dumpster-fire` PVC, image, and 1Password
-     Secret. Keep `Recreate`; only one writer may own the
+3. In homelab `apps/dumpster-fire/values.yaml`, set `replicas: 1` and
+   `AUSTIN_FIRE_ENABLED: "true"`, then sync the Argo CD application. The
+   chart provides the retained `dumpster-fire` PVC, image, and 1Password
+   Secret. Keep `Recreate`; only one writer may own the
    state and trigger. If the state file is missing, the first successful poll
    seeds recent incidents without activating the lamp. Invalid state causes
    startup to fail instead of silently resetting deduplication.
@@ -77,16 +79,14 @@ service every 60 seconds. It replaces the command-line poll entity with
 `sensor.austin_dumpster_fire_controller`;
 the existing last-poll, last-incident, seen-count, and poll-health template
 entities continue to use their previous unique IDs. An activity-deadline
-entity is added. The old command-line poll entity may remain as an unavailable
-registry entry until removed in HA's entity settings. No control automation,
-ingress, or MQTT broker is required. If the controller is unavailable, its
+entity is added. The status package also exposes `light.office_dumpster_fire`,
+whose state follows the measured flame sensor and whose manual on/off actions
+press the Trigger only when needed. Manual actions can still race with the
+standalone controller because the physical input is a toggle. The old
+command-line poll entity may remain as an unavailable registry entry until
+removed in HA's entity settings. If the controller is unavailable, its
 diagnostic entities become unavailable; the ESPHome device remains on its own
 integration. The controller never needs HA to operate the toy.
-
-The HA chart's `austinDumpsterFire.enabled` remains true until the coordinated
-cutover above. The controller chart is GitOps-discovered but remains inactive
-at zero replicas until explicitly scaled during cutover. Neither controller
-should be activated in isolation.
 
 ## Failure semantics and rollback
 
@@ -101,15 +101,13 @@ should be activated in isolation.
 - The feed requests the newest 25 matching incidents, so an extended outage
   or a burst of more than 25 can miss older unseen IDs. The controller retains
   seen IDs still present in the feed past the 48-hour pruning threshold.
-- To roll back, first scale the new controller to zero. Copy its state JSON
-  back to the HA PVC before enabling the old HA package and restarting HA.
-  Do not run both controllers during the rollback. HA cannot import a new
-  controller's active deadline, so wait for the lamp to be off before rolling
-  back, or manage its state explicitly using the physical flame sensor.
+- To roll back, first restore the removed legacy HA chart packaging from
+  version control, then scale the standalone controller to zero. Copy its state
+  JSON back to the HA PVC before restarting HA with the legacy package. Do not
+  run both controllers during rollback. HA cannot import a new controller's
+  active deadline, so wait for the lamp to be off before rolling back, or manage
+  its state explicitly using the physical flame sensor.
 
-## Outstanding deployment inputs
-
-The image registry/tag, ESP32 address, encryption-key Secret provisioning,
-and the existing HA timeout/enable setting are environment-specific. This
-repo does not contain those credentials. Do not switch the active controller
-until those inputs and a published image are in place.
+The controller, image, Secret, HA diagnostics, and manual light are now deployed.
+The legacy HA package files remain in this repository for rollback/reference only;
+the homelab chart no longer ships them.
