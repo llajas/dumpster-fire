@@ -277,6 +277,22 @@ The production homelab chart:
 
 This repo keeps project-specific source and documentation together; the homelab repo remains responsible for deployment.
 
+### Grafana incident report
+
+[`kubernetes/dumpster-fire-controller-dashboard.json`](kubernetes/dumpster-fire-controller-dashboard.json)
+is the project copy of the Grafana dashboard. The independently packaged copy at
+`homelab/system/monitoring-system/files/dumpster-fire-controller-dashboard.json`
+is loaded by the monitoring Helm chart and provisioned through Grafana's dashboard sidecar.
+Keep the two JSON files identical when editing the dashboard.
+
+The first screen shows observed dumpster/trash fire counts for the past 24 hours,
+6 hours, and 1 hour, followed by the hourly trend. The panels use
+`increase(dumpster_fire_new_incidents_total[...])` rather than poll batches,
+recent feed size, or ESPHome trigger counts. Counts start when the standalone
+controller begins observing and depend on available Prometheus history; they
+are not a historical total from the City of Austin. Controller health is below
+the incident report.
+
 ## Repository layout
 
 ```text
@@ -299,6 +315,8 @@ dumpster-fire/
 │   ├── austin_dumpster_fire.yaml
 │   ├── austin_dumpster_fire_poll.py
 │   └── austin_dumpster_fire_status.yaml
+├── kubernetes/
+│   └── dumpster-fire-controller-dashboard.json
 └── images/
     ├── README.md
     ├── dumpster-fire-hero.jpg
