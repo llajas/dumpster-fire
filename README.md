@@ -15,14 +15,13 @@ The finished system watches Austin's real-time fire incident dataset for these e
 - `DUMP - Dumpster Fire`
 - `TRASH - Trash Fire`
 
-When one or more previously unseen matching incidents appear:
-
-1. Home Assistant records the incident IDs so the same event is never replayed.
-2. It checks whether the physical flame LEDs are already on.
-3. If the toy is off, Home Assistant presses the ESPHome `Trigger` button once.
-4. A configurable activity timer starts or resets.
-5. Additional new dumpster/trash fires extend the timer without toggling the lamp again.
-6. When the timer expires, Home Assistant checks the real flame state and toggles the toy off only if it is actually still on.
+The standalone controller records unseen incident IDs, checks the measured flame state
+through ESPHome, and presses the physical toggle only when needed. New incidents extend
+the activity deadline; when it expires, the controller turns the lamp off only if the
+flame sensor still reports it on. Home Assistant retains the ESPHome device, its
+Trigger button and Flame State sensor, plus a state-aware `light.office_dumpster_fire`
+for manual control. The old Home Assistant incident poller and automations are no
+longer part of the active deployment.
 
 The result is a physical indicator for:
 
@@ -51,34 +50,15 @@ The goal was to preserve the original behavior while adding:
 
 ```mermaid
 flowchart TD
-    A[City of Austin Socrata API] -->|poll every ~5 min| B[Python incident poller]
-    B --> C[Persistent seen-ID state]
-    B -->|new_run_id + attributes| D[Home Assistant command_line sensor]
-
-    D --> E{New DUMP/TRASH incidents?}
-    E -->|No| Z[Do nothing]
-    E -->|Yes| F{Physical Flame State}
-
-    F -->|OFF| G[Press ESPHome Trigger once]
-    F -->|ON| H[Leave lamp alone]
-    F -->|Unknown| I[Fail safe: no trigger]
-
-    G --> J[Start / restart activity timer]
-    H --> J
-    I --> J
-
-    J --> K{Timer expires}
-    K --> L{Physical Flame State}
-    L -->|ON| M[Press Trigger once to turn OFF]
-    L -->|OFF / Unknown| N[Do nothing]
-
-    O[ESP32 + PC817 trigger interface] --> P[Original toy trigger circuit]
-    Q[Second PC817] --> R[ESPHome Flame State binary_sensor]
-    S[Original flame LED output] --> Q
-    G --> O
-    M --> O
-    R --> F
-    R --> L
+    A[City of Austin Socrata API] -->|poll every ~5 min| B[Standalone controller]
+    B --> C[Persistent incident state and activity deadline]
+    B <-->|Encrypted native API| D[ESP32 running ESPHome]
+    D --> E[Trigger button: toggle command]
+    D --> F[Flame State: measured feedback]
+    E --> G[Original toy trigger circuit]
+    H[Home Assistant ESPHome integration] <-->|Native API| D
+    H --> I[Manual state-aware light.office_dumpster_fire]
+    B -->|GET /status| J[Home Assistant diagnostic sensors]
 ```
 
 ## Hardware
@@ -206,60 +186,21 @@ The sanitized production ESPHome configuration is included at [`esphome/dumpster
 
 ## Home Assistant behavior
 
-The Home Assistant side provides:
-
-- Enable/disable helper
-- Configurable activity timeout
-- Restorable activity timer
-- Five-minute poll sensor
-- Last-poll and last-incident observability
-- Persistent incident deduplication
-- Fail-safe handling of unknown flame state
-- Timer-driven auto-off
-- Operational logging
-
-The implementation is split intentionally:
-
-### Python poller
-
-`home-assistant/austin_dumpster_fire_poll.py`
-
-Responsible for:
-
-- HTTP request
-- JSON/schema validation
-- persistent seen-ID state
-- first-run seeding
-- 48-hour pruning
-- atomic state-file writes
-- emitting a monotonically increasing `new_run_id`
-
-It does **not** know anything about the lamp hardware.
-
-### Home Assistant package
-
-`home-assistant/austin_dumpster_fire.yaml`
-
-Responsible for:
-
-- deciding whether to press the physical trigger
-- reading the real flame state
-- activity timer behavior
-- logging
-- enable/disable control
-- user-configurable timeout
-
-See [docs/home-assistant.md](docs/home-assistant.md).
+Home Assistant keeps the ESPHome device for visibility and manual use. Its active
+status package exposes controller diagnostics and a measured-state Light; it does
+not poll incidents or run the activity timer. The former HA poller and policy package
+remain in `home-assistant/` as rollback/reference sources only. See
+[the migration runbook](docs/controller-migration.md).
 
 ## Kubernetes / GitOps deployment
 
 In the homelab, Home Assistant runs in Kubernetes.
 
 An independent Python controller and container definition are available
-in [`controller/`](controller/) and [`Dockerfile`](Dockerfile). They move
-incident polling, durable state and toggle policy out of Home Assistant while
-leaving the ESPHome device and its entities connected to Home Assistant. The
-legacy HA package below remains the active path until an exclusive cutover;
+in [`controller/`](controller/) and [`Dockerfile`](Dockerfile). They own incident
+polling, durable state and toggle policy while Home Assistant retains the ESPHome
+integration and read-only controller diagnostics. The active HA status package also
+provides a manual state-aware Light. The former HA incident package is not deployed;
 see [the migration runbook](docs/controller-migration.md), the
 [Woodpecker image pipeline](.woodpecker/default.yaml), and the
 [homelab controller chart](https://github.com/llajas/homelab/tree/master/apps/dumpster-fire).
@@ -267,13 +208,11 @@ The pipeline publishes to `registry.lajas.tech/dumpster-fire-controller` on
 pushes to `main` and the `Rebuild` cron. Do not run both controllers against
 the physical toggle at once.
 
-The production homelab chart:
-
-1. Packages the HA YAML and Python poller in a ConfigMap.
-2. Mounts that ConfigMap into the Home Assistant pod.
-3. Copies the files into `/config` during initialization.
-4. Loads the YAML as a Home Assistant package.
-5. Uses a ConfigMap checksum annotation so changes participate in Deployment rollouts.
+The production Home Assistant chart packages only the status/manual-light YAML in a
+ConfigMap, mounts it into the pod, and copies it into persistent `/config/packages`
+during initialization. A ConfigMap checksum triggers a rollout when it changes. The
+init script also removes stale copies of the retired HA poller and automation from
+the persistent config volume.
 
 This repo keeps project-specific source and documentation together; the homelab repo remains responsible for deployment.
 
@@ -312,8 +251,8 @@ dumpster-fire/
 │   ├── README.md
 │   └── dumpster-fire-alert.yaml
 ├── home-assistant/
-│   ├── austin_dumpster_fire.yaml
-│   ├── austin_dumpster_fire_poll.py
+│   ├── austin_dumpster_fire.yaml        # legacy rollback source
+│   ├── austin_dumpster_fire_poll.py     # legacy rollback source
 │   └── austin_dumpster_fire_status.yaml
 ├── kubernetes/
 │   └── dumpster-fire-controller-dashboard.json
