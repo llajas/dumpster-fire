@@ -19,6 +19,11 @@ steps:
     settings:
       tags: |
         raw --value latest
+        edge
+        raw --value 0.0.${CI_PIPELINE_NUMBER}
+        semver --format {{major}}
+        semver --format {{major}}.{{minor}}
+        semver --format {{version}}
         sha
       tags_file: .tags
     when:

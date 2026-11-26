@@ -17,6 +17,7 @@ steps:
     settings:
       tags: |
         raw --value latest
+        raw --value 0.0.${CI_PIPELINE_NUMBER}
         sha
       tags_file: .tags
 
